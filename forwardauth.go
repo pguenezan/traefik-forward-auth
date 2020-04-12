@@ -45,41 +45,41 @@ type ForwardAuth struct {
 // Request Validation
 
 // Cookie = hash(secret, cookie domain, email, expires)|expires|email
-func (f *ForwardAuth) ValidateCookie(r *http.Request, c *http.Cookie) (bool, string, error) {
+func (f *ForwardAuth) ValidateCookie(r *http.Request, c *http.Cookie) (bool, string, string, error) {
 	parts := strings.Split(c.Value, "|")
 
-	if len(parts) != 3 {
-		return false, "", errors.New("Invalid cookie format")
+	if len(parts) != 4 {
+		return false, "", "", errors.New("Invalid cookie format")
 	}
 
 	mac, err := base64.URLEncoding.DecodeString(parts[0])
 	if err != nil {
-		return false, "", errors.New("Unable to decode cookie mac")
+		return false, "", "", errors.New("Unable to decode cookie mac")
 	}
 
-	expectedSignature := f.cookieSignature(r, parts[2], parts[1])
+	expectedSignature := f.cookieSignature(r, parts[2], parts[3], parts[1])
 	expected, err := base64.URLEncoding.DecodeString(expectedSignature)
 	if err != nil {
-		return false, "", errors.New("Unable to generate mac")
+		return false, "", "", errors.New("Unable to generate mac")
 	}
 
 	// Valid token?
 	if !hmac.Equal(mac, expected) {
-		return false, "", errors.New("Invalid cookie mac")
+		return false, "", "", errors.New("Invalid cookie mac")
 	}
 
 	expires, err := strconv.ParseInt(parts[1], 10, 64)
 	if err != nil {
-		return false, "", errors.New("Unable to parse cookie expiry")
+		return false, "", "", errors.New("Unable to parse cookie expiry")
 	}
 
 	// Has it expired?
 	if time.Unix(expires, 0).Before(time.Now()) {
-		return false, "", errors.New("Cookie has expired")
+		return false, "", "", errors.New("Cookie has expired")
 	}
 
 	// Looks valid
-	return true, parts[2], nil
+	return true, parts[2], parts[3], nil
 }
 
 // Validate email
@@ -164,6 +164,7 @@ type User struct {
 	Email    string `json:"email"`
 	Verified bool   `json:"verified_email"`
 	Hd       string `json:"hd"`
+	Roles    []string `json:"client_roles"`
 }
 
 func (f *ForwardAuth) GetUser(token string) (User, error) {
@@ -233,10 +234,10 @@ func (f *ForwardAuth) useAuthDomain(r *http.Request) (bool, string) {
 // Cookie methods
 
 // Create an auth cookie
-func (f *ForwardAuth) MakeCookie(r *http.Request, email string) *http.Cookie {
+func (f *ForwardAuth) MakeCookie(r *http.Request, email string, roles []string) *http.Cookie {
 	expires := f.cookieExpiry()
-	mac := f.cookieSignature(r, email, fmt.Sprintf("%d", expires.Unix()))
-	value := fmt.Sprintf("%s|%d|%s", mac, expires.Unix(), email)
+	mac := f.cookieSignature(r, email, strings.Join(roles, " "), fmt.Sprintf("%d", expires.Unix()))
+	value := fmt.Sprintf("%s|%d|%s|%s", mac, expires.Unix(), email, strings.Join(roles, " "))
 
 	return &http.Cookie{
 		Name:     f.CookieName,
@@ -343,7 +344,7 @@ func (f *ForwardAuth) matchCookieDomains(domain string) (bool, string) {
 }
 
 // Create cookie hmac
-func (f *ForwardAuth) cookieSignature(r *http.Request, email, expires string) string {
+func (f *ForwardAuth) cookieSignature(r *http.Request, email, roles, expires string) string {
 	hash := hmac.New(sha256.New, f.Secret)
 	hash.Write([]byte(f.cookieDomain(r)))
 	hash.Write([]byte(email))

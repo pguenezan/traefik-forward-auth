@@ -67,7 +67,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate cookie
-	valid, email, err := fw.ValidateCookie(r, c)
+	valid, email, roles_str, err := fw.ValidateCookie(r, c)
 	if !valid {
 		logger.Errorf("Invalid cookie: %v", err)
 		http.Error(w, "Not authorized", 401)
@@ -80,6 +80,23 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		logger.WithFields(logrus.Fields{
 			"email": email,
 		}).Errorf("Invalid email")
+		http.Error(w, "Not authorized", 401)
+		return
+	}
+
+	host := r.Header.Get("X-Forwarded-Host")
+	valid = false
+	for _, role := range strings.Split(roles_str, " ") {
+		if host == role {
+			valid = true
+			break
+		}
+	}
+	if !valid {
+		logger.WithFields(logrus.Fields{
+			"host": host,
+			"roles": roles_str,
+		}).Errorf("Invalid roles")
 		http.Error(w, "Not authorized", 401)
 		return
 	}
@@ -126,15 +143,17 @@ func handleCallback(w http.ResponseWriter, r *http.Request, qs url.Values,
 
 	// Get user
 	user, err := fw.GetUser(token)
+
 	if err != nil {
 		logger.Errorf("Error getting user: %s", err)
 		return
 	}
 
 	// Generate cookie
-	http.SetCookie(w, fw.MakeCookie(r, user.Email))
+	http.SetCookie(w, fw.MakeCookie(r, user.Email, user.Roles))
 	logger.WithFields(logrus.Fields{
 		"user": user.Email,
+		"roles": user.Roles,
 	}).Infof("Generated auth cookie")
 
 	// Redirect
