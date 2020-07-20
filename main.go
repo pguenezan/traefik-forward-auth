@@ -143,6 +143,10 @@ func handleCallback(w http.ResponseWriter, r *http.Request, qs url.Values,
 
 	// Get user
 	user, err := fw.GetUser(token)
+	
+	logger.WithFields(logrus.Fields{
+		"token": token,
+	}).Infof("Return token")
 
 	if err != nil {
 		logger.Errorf("Error getting user: %s", err)
