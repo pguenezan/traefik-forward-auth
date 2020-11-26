@@ -48,7 +48,7 @@ type ForwardAuth struct {
 func (f *ForwardAuth) ValidateCookie(r *http.Request, c *http.Cookie) (bool, string, string, error) {
 	parts := strings.Split(c.Value, "|")
 
-	if len(parts) != 4 {
+	if len(parts) != 8 {
 		return false, "", "", errors.New("Invalid cookie format")
 	}
 
