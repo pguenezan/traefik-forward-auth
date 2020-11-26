@@ -350,6 +350,7 @@ func (f *ForwardAuth) matchCookieDomains(domain string) (bool, string) {
 // Create cookie hmac
 func (f *ForwardAuth) cookieSignature(r *http.Request, email, roles, sub, username, firstName, lastName, expires string) string {
 	hash := hmac.New(sha256.New, f.Secret)
+	log.Warn("cookieDomain = {}", f.cookieDomain(r))
 	hash.Write([]byte(f.cookieDomain(r)))
 	hash.Write([]byte(email))
 	hash.Write([]byte(sub))
