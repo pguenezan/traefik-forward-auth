@@ -57,7 +57,7 @@ func (f *ForwardAuth) ValidateCookie(r *http.Request, c *http.Cookie) (bool, str
 		return false, "", "", errors.New("Unable to decode cookie mac")
 	}
 
-	expectedSignature := f.cookieSignature(r, parts[2], parts[3], parts[1], parts[4], parts[5], parts[6], parts[7])
+	expectedSignature := f.cookieSignature(r, parts[2], parts[3], parts[4], parts[5], parts[6], parts[7], parts[1])
 	expected, err := base64.URLEncoding.DecodeString(expectedSignature)
 	if err != nil {
 		return false, "", "", errors.New("Unable to generate mac")
@@ -240,7 +240,7 @@ func (f *ForwardAuth) useAuthDomain(r *http.Request) (bool, string) {
 // Create an auth cookie
 func (f *ForwardAuth) MakeCookie(r *http.Request, email string, roles []string, sub string, username string, firstName string, lastName string) *http.Cookie {
 	expires := f.cookieExpiry()
-	mac := f.cookieSignature(r, email, strings.Join(roles, " "), fmt.Sprintf("%d", expires.Unix()), sub, username, firstName, lastName)
+	mac := f.cookieSignature(r, email, strings.Join(roles, " "), sub, username, firstName, lastName, fmt.Sprintf("%d", expires.Unix()))
 	value := fmt.Sprintf("%s|%d|%s|%s|%s|%s|%s|%s", mac, expires.Unix(), email, strings.Join(roles, " "), sub, username, firstName, lastName)
 
 	return &http.Cookie{
