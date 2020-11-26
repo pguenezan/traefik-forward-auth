@@ -156,8 +156,8 @@ func handleCallback(w http.ResponseWriter, r *http.Request, qs url.Values,
 	}
 
 	// Generate cookie
-	firstName := b64.StdEncoding.EncodeToString([]byte(user.FirstName))
-	lastName := b64.StdEncoding.EncodeToString([]byte(user.LastName))
+	firstName := b64.URLEncoding.EncodeToString([]byte(user.FirstName))
+	lastName := b64.URLEncoding.EncodeToString([]byte(user.LastName))
 	http.SetCookie(w, fw.MakeCookie(r, user.Email, user.Roles, user.Sub, user.Username, firstName, lastName))
 	logger.WithFields(logrus.Fields{
 		"user":  user.Email,
