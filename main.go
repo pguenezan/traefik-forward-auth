@@ -2,7 +2,6 @@ package main
 
 import (
 	b64 "encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -259,12 +258,11 @@ func main() {
 		whitelist = strings.Split(*emailWhitelist, ",")
 	}
 
-	secret_bytes, _ := hex.DecodeString(*secret)
 	// Setup
 	fw = &ForwardAuth{
 		Path:     fmt.Sprintf("/%s", *path),
 		Lifetime: time.Second * time.Duration(*lifetime),
-		Secret:   secret_bytes,
+		Secret:   []byte(*secret),
 		AuthHost: *authHost,
 
 		ClientId:     *clientId,
